@@ -1,0 +1,55 @@
+name: Auto Create PR from Dev to Master
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Get latest merged PR into dev
+      id: get_latest_pr
+      run: |
+        # Fetch merged pull requests on the 'dev' branch
+        PR_DATA=$(curl -s \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls?state=closed&base=dev")
+        
+        # Extract the most recent PR title, body, and author
+        LATEST_PR_TITLE=$(echo "$PR_DATA" | jq -r '.[0].title')
+        LATEST_PR_AUTHOR=$(echo "$PR_DATA" | jq -r '.[0].user.login')
+        LATEST_PR_URL=$(echo "$PR_DATA" | jq -r '.[0].html_url')
+
+        echo "Latest merged PR title: $LATEST_PR_TITLE"
+        echo "Latest merged PR author: $LATEST_PR_AUTHOR"
+        echo "Latest merged PR URL: $LATEST_PR_URL"
+        
+        # Set outputs for the PR creation
+        echo "::set-output name=title::$LATEST_PR_TITLE"
+        echo "::set-output name=author::$LATEST_PR_AUTHOR"
+        echo "::set-output name=url::$LATEST_PR_URL"
+
+    - name: Create PR from dev to master
+      uses: peter-evans/create-pull-request@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: master
+        head: dev
+        title: "Auto PR: Merge dev into master"
+        body: |
+          This PR merges the changes from the `dev` branch into `master`.
+
+          **Latest merged PR details:**
+          - **Title**: ${{ steps.get_latest_pr.outputs.title }}
+          - **Author**: ${{ steps.get_latest_pr.outputs.author }}
+          - **URL**: ${{ steps.get_latest_pr.outputs.url }}
+        draft: false   # Set to true if you want to create the PR as a draft
