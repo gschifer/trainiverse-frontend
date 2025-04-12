@@ -6,7 +6,7 @@ This is a simple React application that displays a "Hello World" message.
 
 To get started with this project, follow the instructions below.
 
-### Prerequisites
+### Pre-requisites
 
 Make sure you have the following installed:
 
